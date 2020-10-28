@@ -2,3 +2,14 @@
 
 This is meant to be an extremely simple static file server that
 operates on the gemini protocol.
+
+** Features
+
+- Configured with environment variables
+
+
+
+#+BEGIN_SRC
+openssl req -newkey rsa:2048 -nodes -keyout example.com.key -nodes -x509 -out example.com.crt -subj "/CN=example.com"
+env MELCHIOR_TLS_CERT=example.com.crt MELCHIOR_TLS_KEY=example.com.key MELCHIOR_HOSTNAME=example.com go run melchior.go
+#+END_SRC

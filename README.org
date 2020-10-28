@@ -1,0 +1,4 @@
+* Melchior
+
+This is meant to be an extremely simple static file server that
+operates on the gemini protocol.

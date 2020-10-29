@@ -2,10 +2,17 @@ package main
 
 import (
 	"log"
+	"io/ioutil"
+	"fmt"
 	"crypto/tls"
-	// 	"time"
+	"path/filepath"
+	"strings"
+	"time"
+	"net/http"
 	"os"
 	"net"
+	"net/url"
+	"mime"
 )
 const (
 	Version = "0.0.1"
@@ -21,8 +28,8 @@ func main() {
 
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		// ClientAuth:   tls.VerifyClientCertIfGiven,
-		// ServerName:   os.Getenv("MELCHIOR_HOSTNAME"),
+		ClientAuth:   tls.VerifyClientCertIfGiven,
+		ServerName:   os.Getenv("MELCHIOR_HOSTNAME"),
 	}
 
 	listener, err := tls.Listen("tcp", os.Getenv("MELCHIOR_BIND_ADDR"), tlsConfig)
@@ -38,10 +45,10 @@ func main() {
 		}
 
 		// todo make this configuratable
-		// err = conn.SetDeadline(time.Now().Add(5 * time.Second))
-		// if err != nil {
-		// 	log.Printf("Unable to set connection deadline: %s", err)
-		// }
+		err = conn.SetDeadline(time.Now().Add(5 * time.Second))
+		if err != nil {
+			log.Printf("Unable to set connection deadline: %s", err)
+		}
 
 		err = handle(conn)
 		if err != nil {
@@ -64,6 +71,67 @@ func handle(conn net.Conn) error {
 	}
 	inputURL := requestData[0:readLen]
 	log.Println(string(inputURL))
-	conn.Write([]byte("20 text/plain\r\nhi there\r\n"))
+
+	urlString := strings.TrimSpace(string(inputURL))
+	u, err := url.Parse(urlString)
+	if err != nil {
+		reply(conn, 59, "Bad URL")
+		return err
+	}
+
+	uPath := u.Path
+
+
+	if !strings.HasPrefix(uPath, "/") {
+		uPath = "/" + uPath
+	}
+
+	if strings.HasSuffix(uPath, "/") {
+		uPath = uPath + "index.gmi"
+	}
+
+	var root http.Dir = http.Dir(os.Getenv("MELCHIOR_ROOT_DIR"))
+
+	cleanPath := filepath.Clean(uPath)
+	log.Printf("Attempting to open file: %s", cleanPath)
+	f, err := root.Open(cleanPath)
+	if err != nil {
+		reply(conn, 51, "File not found")
+		return err
+	}
+
+	defer f.Close()
+
+	body , err := ioutil.ReadAll(f)
+	if err != nil {
+		reply(conn, 59, "File read error")
+		return err
+	}
+
+	meta := http.DetectContentType(body)
+
+	if strings.HasSuffix(uPath, ".gmi") {
+		meta = "text/gemini; lang=en; charset=utf-8"
+	}
+
+	_, err = fullResponse(conn, meta, body)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
+
+func reply(conn net.Conn, code int, message string) (int, error) {
+	msg := fmt.Sprintf("%d %s\r\n", code, message)
+	return conn.Write([]byte(msg))
+}
+func fullResponse(conn net.Conn, meta string, body []byte) (int, error) {
+	_, err := reply(conn, 20, meta)
+	if err != nil {
+		return 0, err
+	}
+	return conn.Write([]byte(body))
+}
+
+

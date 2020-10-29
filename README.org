@@ -11,6 +11,6 @@ operates on the gemini protocol.
 
 #+BEGIN_SRC
 openssl req -newkey rsa:2048 -nodes -keyout example.com.key -nodes -x509 -out example.com.crt -subj "/CN=example.com"
-env MELCHIOR_TLS_CERT=localhost.crt MELCHIOR_TLS_KEY=localhost.key MELCHIOR_HOSTNAME=localhost MELCHIOR_BIND_ADDR=127.0.0.1:65 fo run melchior.go
+env MELCHIOR_TLS_CERT=localhost.crt MELCHIOR_TLS_KEY=localhost.key MELCHIOR_HOSTNAME=localhost MELCHIOR_BIND_ADDR=127.0.0.1:1965 MELCHIOR_ROOT_DIR=. go run melchior.go
 socat - OPENSSL-connect:127.0.0.1:1965,verify=0
 #+END_SRC

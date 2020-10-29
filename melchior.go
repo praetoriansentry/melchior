@@ -1,19 +1,19 @@
 package main
 
 import (
-	"log"
-	"io/ioutil"
-	"fmt"
 	"crypto/tls"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
-	"net/http"
-	"os"
-	"net"
-	"net/url"
-	"mime"
 )
+
 const (
 	Version = "0.0.1"
 )
@@ -81,7 +81,6 @@ func handle(conn net.Conn) error {
 
 	uPath := u.Path
 
-
 	if !strings.HasPrefix(uPath, "/") {
 		uPath = "/" + uPath
 	}
@@ -102,7 +101,7 @@ func handle(conn net.Conn) error {
 
 	defer f.Close()
 
-	body , err := ioutil.ReadAll(f)
+	body, err := ioutil.ReadAll(f)
 	if err != nil {
 		reply(conn, 59, "File read error")
 		return err
@@ -133,5 +132,3 @@ func fullResponse(conn net.Conn, meta string, body []byte) (int, error) {
 	}
 	return conn.Write([]byte(body))
 }
-
-

@@ -190,7 +190,9 @@ func handle(conn net.Conn) error {
 func reply(conn net.Conn, code int, message string) {
 	msg := fmt.Sprintf("%d %s\r\n", code, message)
 	_, err := conn.Write([]byte(msg))
-	log.Printf("There was an error writing to the connection: %s", err)
+	if err != nil {
+		log.Printf("There was an error writing to the connection: %s", err)
+	}
 }
 
 func fullResponse(conn net.Conn, meta string, body []byte) (int, error) {

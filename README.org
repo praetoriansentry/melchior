@@ -28,3 +28,16 @@ some testing
 #+BEGIN_SRC
 socat - OPENSSL-connect:127.0.0.1:1965,verify=0
 #+END_SRC
+
+
+** Installation
+
+#+begin_src
+go build melchior.go
+cp melchior /usr/local/bin/melchior
+cp melchior-daemon.service /etc/systemd/system/melchior-daemon.service
+chmod 664 /etc/systemd/system/melchior-daemon.service
+
+sudo systemctl enable melchior-daemon
+sudo systemctl start melchior-daemon
+#+end_src

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -64,7 +65,7 @@ func initVars() error {
 	log.Printf("The value of %s is %s", "MELCHIOR_HOSTNAME", MelchiorHostname)
 	log.Printf("The value of %s is %s", "MELCHIOR_BIND_ADDR", MelchiorBindAddr)
 	log.Printf("The value of %s is %s", "MELCHIOR_ROOT_DIR", MelchiorRootDir)
-	log.Printf("The value of %s is %s", "MELCHIOR_DEADLINE", MelchiorDeadline)
+	log.Printf("The value of %s is %d", "MELCHIOR_DEADLINE", MelchiorDeadline)
 
 	return nil
 }
@@ -106,7 +107,7 @@ func main() {
 			log.Printf("Unable to set connection deadline: %s", err)
 		}
 
-		go func () {
+		go func() {
 			err = handle(conn)
 			if err != nil {
 				log.Printf("There was an error handling the connection: %s", err)
@@ -178,6 +179,7 @@ func handle(conn net.Conn) error {
 	}
 
 	_, err = fullResponse(conn, meta, body)
+
 	if err != nil {
 		return err
 	}
@@ -185,14 +187,13 @@ func handle(conn net.Conn) error {
 	return nil
 }
 
-func reply(conn net.Conn, code int, message string) (int, error) {
+func reply(conn net.Conn, code int, message string) {
 	msg := fmt.Sprintf("%d %s\r\n", code, message)
-	return conn.Write([]byte(msg))
+	_, err := conn.Write([]byte(msg))
+	log.Printf("There was an error writing to the connection: %s", err)
 }
+
 func fullResponse(conn net.Conn, meta string, body []byte) (int, error) {
-	_, err := reply(conn, 20, meta)
-	if err != nil {
-		return 0, err
-	}
+	reply(conn, 20, meta)
 	return conn.Write([]byte(body))
 }

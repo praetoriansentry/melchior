@@ -1,16 +1,30 @@
 * Melchior
 
 This is meant to be an extremely simple static file server that
-operates on the gemini protocol.
+operates on the gemini protocol. I mostly just wanted an extremely
+simple and hopfully secure server to run at home.
 
 ** Features
 
 - Configured with environment variables
 
+** Running
 
+In order to run this, at the very least you'll need to generate a
+certificate. I've been using a command like this.
 
 #+BEGIN_SRC
-openssl req -newkey rsa:2048 -nodes -keyout example.com.key -nodes -x509 -out example.com.crt -subj "/CN=example.com"
+openssl req -newkey rsa:2048 -nodes -keyout localhost.key -nodes -x509 -out localhost.crt -subj "/CN=localhost"
+#+END_SRC
+
+After getting the certificates generated you can run this by doing
+
+#+BEGIN_SRC
 env MELCHIOR_TLS_CERT=localhost.crt MELCHIOR_TLS_KEY=localhost.key MELCHIOR_HOSTNAME=localhost MELCHIOR_BIND_ADDR=127.0.0.1:1965 MELCHIOR_ROOT_DIR=. go run melchior.go
+#+END_SRC
+
+If you don't have a gemini client handy, you can use ~socat~ to do
+some testing
+#+BEGIN_SRC
 socat - OPENSSL-connect:127.0.0.1:1965,verify=0
 #+END_SRC

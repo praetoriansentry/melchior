@@ -14,10 +14,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const (
-	Version = "0.0.1"
+	Version = "0.0.2"
 )
 
 var (
@@ -25,6 +26,8 @@ var (
 	MelchiorTLSKey   = ""
 	MelchiorHostname = ""
 	MelchiorBindAddr = ""
+	MelchiorBindHost = ""
+	MelchiorBindPort = ""
 	MelchiorRootDir  = ""
 	MelchiorDeadline = 5
 )
@@ -58,6 +61,11 @@ func initVars() error {
 		} else {
 			log.Println("Unable to set deadline. Double check MELCHIOR_DEADLINE")
 		}
+	}
+	var err error
+	MelchiorBindHost, MelchiorBindPort, err = net.SplitHostPort(MelchiorBindAddr)
+	if err != nil {
+		return err
 	}
 
 	log.Printf("The value of %s is %s", "MELCHIOR_TLS_CERT", MelchiorTLSCert)
@@ -123,25 +131,69 @@ func main() {
 
 func handle(conn net.Conn) error {
 	log.Printf("Handling connection from %s connecting to us on %s", conn.RemoteAddr(), conn.LocalAddr())
-	// The max length of one of these lines should be 1024 characters + \r\n
-	requestData := make([]byte, 1026)
+	// The max length of one of these lines should be 1024 characters
+	requestData := make([]byte, 2048)
 	readLen, err := conn.Read(requestData)
 	if err != nil {
 		return err
 	}
 
+	if readLen > 1026 {
+		reply(conn, 59, "URL too long")
+		return fmt.Errorf("The length of the request line was too long. %d", readLen)
+	}
+
 	inputURL := requestData[0:readLen]
 
+	if !utf8.Valid(inputURL) {
+		reply(conn, 59, "Non-UTF8 URL")
+		return fmt.Errorf("The url had junk data in it: %s", inputURL)
+	}
+
+	if !strings.HasSuffix(string(inputURL), "\r\n") {
+		return fmt.Errorf("The url didn't end with \\r\\n so returning nothing")
+	}
+
 	urlString := strings.TrimSpace(string(inputURL))
+
+	if urlString == "" {
+		reply(conn, 59, "Emtpy URL")
+		return err
+	}
+
 	u, err := url.Parse(urlString)
 	if err != nil {
 		reply(conn, 59, "Bad URL")
 		return err
 	}
 
+	if u.Hostname() == "" {
+		reply(conn, 59, "Emtpy hostname")
+		return fmt.Errorf("The URL hostname was blank: %s", urlString)
+	}
+
+	if u.Port() != "" && u.Port() != MelchiorBindPort {
+		reply(conn, 53, "Wrong port")
+		return fmt.Errorf("The URL port doesn't make sense: %s", u.Port())
+	}
+
+	if u.Hostname() != MelchiorHostname {
+		reply(conn, 53, "Wrong hostname")
+		return fmt.Errorf("The URL hostname doesn't make sense: %s", u.Hostname())
+	}
+
+	if u.Scheme != "gemini" && u.Scheme != "" {
+		reply(conn, 53, "URL Scheme Not Accepted")
+		return fmt.Errorf("The URL scheme wasn't gemini: %s", u.Scheme)
+	}
+
 	log.Printf("Got a request to %s", urlString)
 
 	uPath := u.Path
+	if uPath == "" {
+		reply(conn, 31, urlString+"/")
+		return nil
+	}
 
 	if !strings.HasPrefix(uPath, "/") {
 		uPath = "/" + uPath
@@ -158,6 +210,10 @@ func handle(conn net.Conn) error {
 
 	cleanPath := filepath.Clean(uPath)
 	log.Printf("Attempting to open file: %s", cleanPath)
+	if uPath != cleanPath {
+		reply(conn, 59, "Bad path")
+		return fmt.Errorf("Clean and original paths don't match: %s != %s", cleanPath, uPath)
+	}
 	f, err := root.Open(cleanPath)
 	if err != nil {
 		reply(conn, 51, "File not found")

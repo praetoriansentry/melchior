@@ -33,7 +33,8 @@ socat - OPENSSL-connect:127.0.0.1:1965,verify=0
 ** Installation
 
 #+begin_src
-go build melchior.go
+# I'm doing a static build so that I can run this more easily in a container-ish environment
+go build -ldflags "-linkmode external -extldflags -static" -a melchior.go
 cp melchior /usr/local/bin/melchior
 cp melchior-daemon.service /etc/systemd/system/melchior-daemon.service
 chmod 664 /etc/systemd/system/melchior-daemon.service

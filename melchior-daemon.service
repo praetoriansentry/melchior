@@ -2,13 +2,16 @@
 Description=Melchior
 
 [Service]
-Environment=MELCHIOR_TLS_CERT=/var/gemini/certs/jfh.me.crt
-Environment=MELCHIOR_TLS_KEY=/var/gemini/certs/jfh.me.key
+Environment=MELCHIOR_TLS_CERT=/certs/jfh.me.crt
+Environment=MELCHIOR_TLS_KEY=/certs/jfh.me.key
 Environment=MELCHIOR_HOSTNAME=jfh.me
 Environment=MELCHIOR_BIND_ADDR=:1965
-Environment=MELCHIOR_ROOT_DIR=/var/gemini/root/
+Environment=MELCHIOR_ROOT_DIR=/root/
 
-ExecStart=/usr/local/bin/melchior
+RootDirectory=/var/gemini
+PrivateUsers=yes
+MountAPIVFS=no
+ExecStart=/melchior
 
 [Install]
 WantedBy=multi-user.target
